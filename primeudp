@@ -1,0 +1,129 @@
+server
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int isPrime(int n) {
+    int i;
+
+    if (n <= 1)
+        return 0;
+
+    for (i = 2; i <= n / 2; i++) {
+        if (n % i == 0)
+            return 0;
+    }
+
+    return 1;
+}
+
+int main() {
+    int sockfd;
+    int num;
+    char result[100];
+
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t len;
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    // Bind socket
+    bind(sockfd,
+         (struct sockaddr *)&server_addr,
+         sizeof(server_addr));
+
+    printf("UDP Server waiting...\n");
+
+    len = sizeof(client_addr);
+
+    // Receive number from client
+    recvfrom(sockfd,
+             &num,
+             sizeof(num),
+             0,
+             (struct sockaddr *)&client_addr,
+             &len);
+
+    printf("Received number: %d\n", num);
+
+    // Check prime
+    if (isPrime(num))
+        sprintf(result, "%d is a Prime Number", num);
+    else
+        sprintf(result, "%d is Not a Prime Number", num);
+
+    // Send result to client
+    sendto(sockfd,
+           result,
+           sizeof(result),
+           0,
+           (struct sockaddr *)&client_addr,
+           len);
+
+    // Close socket
+    close(sockfd);
+
+    return 0;
+}
+
+client
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int main() {
+    int sockfd;
+    int num;
+    char result[100];
+
+    struct sockaddr_in server_addr;
+    socklen_t len;
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Read number
+    printf("Enter a number: ");
+    scanf("%d", &num);
+
+    // Send number to server
+    sendto(sockfd,
+           &num,
+           sizeof(num),
+           0,
+           (struct sockaddr *)&server_addr,
+           sizeof(server_addr));
+
+    // Receive result
+    len = sizeof(server_addr);
+
+    recvfrom(sockfd,
+             result,
+             sizeof(result),
+             0,
+             (struct sockaddr *)&server_addr,
+             &len);
+
+    // Display result
+    printf("Server: %s\n", result);
+
+    // Close socket
+    close(sockfd);
+
+    return 0;
+}
