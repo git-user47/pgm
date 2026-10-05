@@ -1,0 +1,142 @@
+server
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int isPalindrome(char str[]) {
+    int i = 0;
+    int j = strlen(str) - 1;
+
+    // Remove newline if present
+    if (str[j] == '\n') {
+        str[j] = '\0';
+        j--;
+    }
+
+    while (i < j) {
+        if (str[i] != str[j]) {
+            return 0;
+        }
+
+        i++;
+        j--;
+    }
+
+    return 1;
+}
+
+int main() {
+    int sockfd;
+
+    char buffer[1024];
+    char result[100];
+
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t len;
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    // Bind socket
+    bind(sockfd,
+         (struct sockaddr *)&server_addr,
+         sizeof(server_addr));
+
+    printf("UDP Server waiting...\n");
+
+    len = sizeof(client_addr);
+
+    // Receive string from client
+    recvfrom(sockfd,
+             buffer,
+             sizeof(buffer),
+             0,
+             (struct sockaddr *)&client_addr,
+             &len);
+
+    printf("Received string: %s", buffer);
+
+    // Check palindrome
+    if (isPalindrome(buffer)) {
+        strcpy(result, "Palindrome");
+    } else {
+        strcpy(result, "Not a Palindrome");
+    }
+
+    // Send result back to client
+    sendto(sockfd,
+           result,
+           strlen(result) + 1,
+           0,
+           (struct sockaddr *)&client_addr,
+           len);
+
+    // Close socket
+    close(sockfd);
+
+    return 0;
+}
+
+client
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int main() {
+    int sockfd;
+
+    char buffer[1024];
+    char result[100];
+
+    struct sockaddr_in server_addr;
+    socklen_t len;
+
+    // Create UDP socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Read string
+    printf("Enter a string: ");
+    fgets(buffer, sizeof(buffer), stdin);
+
+    // Send string to server
+    sendto(sockfd,
+           buffer,
+           strlen(buffer) + 1,
+           0,
+           (struct sockaddr *)&server_addr,
+           sizeof(server_addr));
+
+    // Receive result
+    len = sizeof(server_addr);
+
+    recvfrom(sockfd,
+             result,
+             sizeof(result),
+             0,
+             (struct sockaddr *)&server_addr,
+             &len);
+
+    // Display result
+    printf("Result: %s\n", result);
+
+    // Close socket
+    close(sockfd);
+
+    return 0;
+}
