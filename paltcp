@@ -1,0 +1,128 @@
+server
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int isPalindrome(char str[]) {
+    int i = 0;
+    int j = strlen(str) - 1;
+
+    // Remove newline if present
+    if (str[j] == '\n') {
+        str[j] = '\0';
+        j--;
+    }
+
+    while (i < j) {
+        if (str[i] != str[j]) {
+            return 0;
+        }
+
+        i++;
+        j--;
+    }
+
+    return 1;
+}
+
+int main() {
+    int server_fd, new_socket;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t addrlen = sizeof(client_addr);
+
+    char buffer[1024];
+    char result[100];
+
+    // Create TCP socket
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    // Bind socket
+    bind(server_fd, (struct sockaddr *)&server_addr,
+         sizeof(server_addr));
+
+    // Listen for client
+    listen(server_fd, 3);
+
+    printf("TCP Server waiting...\n");
+
+    // Accept client connection
+    new_socket = accept(server_fd,
+                         (struct sockaddr *)&client_addr,
+                         &addrlen);
+
+    // Receive string
+    recv(new_socket, buffer, sizeof(buffer), 0);
+
+    printf("Received string: %s", buffer);
+
+    // Check palindrome
+    if (isPalindrome(buffer)) {
+        strcpy(result, "Palindrome");
+    } else {
+        strcpy(result, "Not a Palindrome");
+    }
+
+    // Send result to client
+    send(new_socket, result, strlen(result) + 1, 0);
+
+    // Close sockets
+    close(new_socket);
+    close(server_fd);
+
+    return 0;
+}
+
+client
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 12345
+
+int main() {
+    int sock;
+    struct sockaddr_in server_addr;
+
+    char buffer[1024];
+    char result[100];
+
+    // Create TCP socket
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Configure server address
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Connect to server
+    connect(sock,
+            (struct sockaddr *)&server_addr,
+            sizeof(server_addr));
+
+    // Read string
+    printf("Enter a string: ");
+    fgets(buffer, sizeof(buffer), stdin);
+
+    // Send string to server
+    send(sock, buffer, strlen(buffer) + 1, 0);
+
+    // Receive result
+    recv(sock, result, sizeof(result), 0);
+
+    // Display result
+    printf("Result: %s\n", result);
+
+    // Close socket
+    close(sock);
+
+    return 0;
+}
